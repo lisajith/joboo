@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /* =========================================================
    HELPERS
@@ -51,7 +52,6 @@ function getFinalLocations(formData: FormData) {
   const rawLocations =
     locations.length > 0 ? locations : oldLocation ? [oldLocation] : [];
 
-  // Remove duplicate locations
   return Array.from(
     new Set(rawLocations.map((location) => location.trim()).filter(Boolean)),
   );
@@ -94,6 +94,9 @@ export async function createJob(formData: FormData) {
     };
   }
 
+  // Admin client is used only after admin verification
+  const adminSupabase = createAdminClient();
+
   /* -----------------------------
      Basic information
   ----------------------------- */
@@ -119,9 +122,7 @@ export async function createJob(formData: FormData) {
   const salaryMin = salaryMinValue ? Number(salaryMinValue) : null;
   const salaryMax = salaryMaxValue ? Number(salaryMaxValue) : null;
 
-  const salaryDisclosed = formData.has("salaryDisclosed")
-    ? formData.get("salaryDisclosed") === "true"
-    : salaryMin !== null || salaryMax !== null;
+  const salaryDisclosed = formData.get("salaryDisclosed") === "true";
 
   /* -----------------------------
      Candidate requirements
@@ -247,7 +248,7 @@ export async function createJob(formData: FormData) {
      CREATE MAIN JOB
   ===================================================== */
 
-  const { data: job, error: jobError } = await supabase
+  const { data: job, error: jobError } = await adminSupabase
     .from("jobs")
     .insert({
       title,
@@ -255,7 +256,6 @@ export async function createJob(formData: FormData) {
       company_id: companyId,
       category_id: categoryId,
 
-      // Compatibility column
       location: finalLocations.join(", "),
 
       job_type: jobType,
@@ -307,14 +307,14 @@ export async function createJob(formData: FormData) {
     location,
   }));
 
-  const { error: locationsError } = await supabase
+  const { error: locationsError } = await adminSupabase
     .from("job_locations")
     .insert(jobLocations);
 
   if (locationsError) {
     console.error("Create job locations error:", locationsError);
 
-    await supabase.from("jobs").delete().eq("id", jobId);
+    await adminSupabase.from("jobs").delete().eq("id", jobId);
 
     return {
       error: "Job was created but locations could not be saved.",
@@ -332,14 +332,16 @@ export async function createJob(formData: FormData) {
       position: index,
     }));
 
-    const { error } = await supabase.from("job_responsibilities").insert(rows);
+    const { error } = await adminSupabase
+      .from("job_responsibilities")
+      .insert(rows);
 
     if (error) {
       console.error("Create responsibilities error:", error);
 
-      await supabase.from("job_locations").delete().eq("job_id", jobId);
+      await adminSupabase.from("job_locations").delete().eq("job_id", jobId);
 
-      await supabase.from("jobs").delete().eq("id", jobId);
+      await adminSupabase.from("jobs").delete().eq("id", jobId);
 
       return {
         error: "Job was created but responsibilities could not be saved.",
@@ -358,16 +360,19 @@ export async function createJob(formData: FormData) {
       position: index,
     }));
 
-    const { error } = await supabase.from("job_requirements").insert(rows);
+    const { error } = await adminSupabase.from("job_requirements").insert(rows);
 
     if (error) {
       console.error("Create requirements error:", error);
 
-      await supabase.from("job_locations").delete().eq("job_id", jobId);
+      await adminSupabase.from("job_locations").delete().eq("job_id", jobId);
 
-      await supabase.from("job_responsibilities").delete().eq("job_id", jobId);
+      await adminSupabase
+        .from("job_responsibilities")
+        .delete()
+        .eq("job_id", jobId);
 
-      await supabase.from("jobs").delete().eq("id", jobId);
+      await adminSupabase.from("jobs").delete().eq("id", jobId);
 
       return {
         error: "Job was created but requirements could not be saved.",
@@ -386,18 +391,21 @@ export async function createJob(formData: FormData) {
       position: index,
     }));
 
-    const { error } = await supabase.from("job_benefits").insert(rows);
+    const { error } = await adminSupabase.from("job_benefits").insert(rows);
 
     if (error) {
       console.error("Create benefits error:", error);
 
-      await supabase.from("job_locations").delete().eq("job_id", jobId);
+      await adminSupabase.from("job_locations").delete().eq("job_id", jobId);
 
-      await supabase.from("job_responsibilities").delete().eq("job_id", jobId);
+      await adminSupabase
+        .from("job_responsibilities")
+        .delete()
+        .eq("job_id", jobId);
 
-      await supabase.from("job_requirements").delete().eq("job_id", jobId);
+      await adminSupabase.from("job_requirements").delete().eq("job_id", jobId);
 
-      await supabase.from("jobs").delete().eq("id", jobId);
+      await adminSupabase.from("jobs").delete().eq("id", jobId);
 
       return {
         error: "Job was created but benefits could not be saved.",
@@ -414,22 +422,25 @@ export async function createJob(formData: FormData) {
     skill_id: skillId,
   }));
 
-  const { error: skillsError } = await supabase
+  const { error: skillsError } = await adminSupabase
     .from("job_skills")
     .insert(jobSkills);
 
   if (skillsError) {
     console.error("Create job skills error:", skillsError);
 
-    await supabase.from("job_locations").delete().eq("job_id", jobId);
+    await adminSupabase.from("job_locations").delete().eq("job_id", jobId);
 
-    await supabase.from("job_responsibilities").delete().eq("job_id", jobId);
+    await adminSupabase
+      .from("job_responsibilities")
+      .delete()
+      .eq("job_id", jobId);
 
-    await supabase.from("job_requirements").delete().eq("job_id", jobId);
+    await adminSupabase.from("job_requirements").delete().eq("job_id", jobId);
 
-    await supabase.from("job_benefits").delete().eq("job_id", jobId);
+    await adminSupabase.from("job_benefits").delete().eq("job_id", jobId);
 
-    await supabase.from("jobs").delete().eq("id", jobId);
+    await adminSupabase.from("jobs").delete().eq("id", jobId);
 
     return {
       error: "Job was created but skills could not be saved.",
@@ -454,6 +465,9 @@ export async function updateJob(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  console.log("UPDATE JOB USER:", user?.id);
+  console.log("UPDATE JOB EMAIL:", user?.email);
+
   if (!user) {
     return {
       error: "You must be logged in.",
@@ -476,24 +490,22 @@ export async function updateJob(formData: FormData) {
     };
   }
 
+  // Use secret client after admin verification
+  const adminSupabase = createAdminClient();
+
   /* -----------------------------
      Basic information
   ----------------------------- */
 
   const jobId = String(formData.get("jobId") || "");
-
   const title = String(formData.get("title") || "").trim();
-
   const companyId = String(formData.get("companyId") || "");
-
   const categoryId = String(formData.get("categoryId") || "");
 
   const finalLocations = getFinalLocations(formData);
 
   const jobType = String(formData.get("jobType") || "");
-
   const workMode = String(formData.get("workMode") || "");
-
   const experience = String(formData.get("experience") || "").trim();
 
   /* -----------------------------
@@ -501,25 +513,19 @@ export async function updateJob(formData: FormData) {
   ----------------------------- */
 
   const salaryMinValue = String(formData.get("salaryMin") || "");
-
   const salaryMaxValue = String(formData.get("salaryMax") || "");
-
   const salaryPeriod = String(formData.get("salaryPeriod") || "");
 
   const salaryMin = salaryMinValue ? Number(salaryMinValue) : null;
-
   const salaryMax = salaryMaxValue ? Number(salaryMaxValue) : null;
 
-  const salaryDisclosed = formData.has("salaryDisclosed")
-    ? formData.get("salaryDisclosed") === "true"
-    : salaryMin !== null || salaryMax !== null;
+  const salaryDisclosed = formData.get("salaryDisclosed") === "true";
 
   /* -----------------------------
      Dates
   ----------------------------- */
 
   const postedAt = String(formData.get("postedAt") || "");
-
   const deadline = String(formData.get("deadline") || "");
 
   /* -----------------------------
@@ -535,6 +541,13 @@ export async function updateJob(formData: FormData) {
   const requirements = getLines(formData, "requirements");
 
   const benefits = getLines(formData, "benefits");
+
+  console.log("========== UPDATE JOB CONTENT ==========");
+  console.log("Job ID:", jobId);
+  console.log("Responsibilities:", responsibilities);
+  console.log("Requirements:", requirements);
+  console.log("Benefits:", benefits);
+  console.log("========================================");
 
   /* -----------------------------
      Candidate requirements
@@ -642,7 +655,7 @@ export async function updateJob(formData: FormData) {
      UPDATE MAIN JOB
   ===================================================== */
 
-  const { error: jobError } = await supabase
+  const { error: jobError } = await adminSupabase
     .from("jobs")
     .update({
       title,
@@ -650,7 +663,6 @@ export async function updateJob(formData: FormData) {
       company_id: companyId,
       category_id: categoryId,
 
-      // Compatibility column
       location: finalLocations.join(", "),
 
       job_type: jobType,
@@ -674,7 +686,6 @@ export async function updateJob(formData: FormData) {
       graduation_years: graduationYears.length > 0 ? graduationYears : null,
 
       application_url: applicationUrl,
-
       application_source: applicationSource || null,
 
       is_published: isPublished,
@@ -699,11 +710,12 @@ export async function updateJob(formData: FormData) {
      REPLACE LOCATIONS
   ===================================================== */
 
-  const { data: deletedLocations, error: deleteLocationsError } = await supabase
-    .from("job_locations")
-    .delete()
-    .eq("job_id", jobId)
-    .select("id");
+  const { data: deletedLocations, error: deleteLocationsError } =
+    await adminSupabase
+      .from("job_locations")
+      .delete()
+      .eq("job_id", jobId)
+      .select("id");
 
   if (deleteLocationsError) {
     console.error("DELETE JOB LOCATIONS ERROR:", deleteLocationsError);
@@ -723,7 +735,7 @@ export async function updateJob(formData: FormData) {
   }));
 
   if (jobLocations.length > 0) {
-    const { error: locationsError } = await supabase
+    const { error: locationsError } = await adminSupabase
       .from("job_locations")
       .insert(jobLocations);
 
@@ -740,21 +752,23 @@ export async function updateJob(formData: FormData) {
      REPLACE RESPONSIBILITIES
   ===================================================== */
 
-  const { error: deleteResponsibilitiesError } = await supabase
+  const { error: deleteResponsibilitiesError } = await adminSupabase
     .from("job_responsibilities")
     .delete()
     .eq("job_id", jobId);
 
   if (deleteResponsibilitiesError) {
     console.error(
-      "Delete responsibilities error:",
+      "DELETE RESPONSIBILITIES ERROR:",
       deleteResponsibilitiesError,
     );
 
     return {
-      error: "Job was updated but responsibilities could not be replaced.",
+      error: `Responsibilities delete failed: ${deleteResponsibilitiesError.message}`,
     };
   }
+
+  console.log("Responsibilities to insert:", responsibilities);
 
   if (responsibilities.length > 0) {
     const rows = responsibilities.map((responsibility, index) => ({
@@ -763,13 +777,20 @@ export async function updateJob(formData: FormData) {
       position: index,
     }));
 
-    const { error } = await supabase.from("job_responsibilities").insert(rows);
+    console.log("Responsibility rows:", rows);
+
+    const { data, error } = await adminSupabase
+      .from("job_responsibilities")
+      .insert(rows)
+      .select();
+
+    console.log("Inserted responsibilities:", data);
 
     if (error) {
-      console.error("Update responsibilities error:", error);
+      console.error("INSERT RESPONSIBILITIES ERROR:", error);
 
       return {
-        error: "Job was updated but responsibilities could not be saved.",
+        error: `Responsibilities save failed: ${error.message}`,
       };
     }
   }
@@ -778,18 +799,20 @@ export async function updateJob(formData: FormData) {
      REPLACE REQUIREMENTS
   ===================================================== */
 
-  const { error: deleteRequirementsError } = await supabase
+  const { error: deleteRequirementsError } = await adminSupabase
     .from("job_requirements")
     .delete()
     .eq("job_id", jobId);
 
   if (deleteRequirementsError) {
-    console.error("Delete requirements error:", deleteRequirementsError);
+    console.error("DELETE REQUIREMENTS ERROR:", deleteRequirementsError);
 
     return {
-      error: "Job was updated but requirements could not be replaced.",
+      error: `Requirements delete failed: ${deleteRequirementsError.message}`,
     };
   }
+
+  console.log("Requirements to insert:", requirements);
 
   if (requirements.length > 0) {
     const rows = requirements.map((requirement, index) => ({
@@ -798,13 +821,20 @@ export async function updateJob(formData: FormData) {
       position: index,
     }));
 
-    const { error } = await supabase.from("job_requirements").insert(rows);
+    console.log("Requirement rows:", rows);
+
+    const { data, error } = await adminSupabase
+      .from("job_requirements")
+      .insert(rows)
+      .select();
+
+    console.log("Inserted requirements:", data);
 
     if (error) {
-      console.error("Update requirements error:", error);
+      console.error("INSERT REQUIREMENTS ERROR:", error);
 
       return {
-        error: "Job was updated but requirements could not be saved.",
+        error: `Requirements save failed: ${error.message}`,
       };
     }
   }
@@ -813,18 +843,20 @@ export async function updateJob(formData: FormData) {
      REPLACE BENEFITS
   ===================================================== */
 
-  const { error: deleteBenefitsError } = await supabase
+  const { error: deleteBenefitsError } = await adminSupabase
     .from("job_benefits")
     .delete()
     .eq("job_id", jobId);
 
   if (deleteBenefitsError) {
-    console.error("Delete benefits error:", deleteBenefitsError);
+    console.error("DELETE BENEFITS ERROR:", deleteBenefitsError);
 
     return {
-      error: "Job was updated but benefits could not be replaced.",
+      error: `Benefits delete failed: ${deleteBenefitsError.message}`,
     };
   }
+
+  console.log("Benefits to insert:", benefits);
 
   if (benefits.length > 0) {
     const rows = benefits.map((benefit, index) => ({
@@ -833,13 +865,20 @@ export async function updateJob(formData: FormData) {
       position: index,
     }));
 
-    const { error } = await supabase.from("job_benefits").insert(rows);
+    console.log("Benefit rows:", rows);
+
+    const { data, error } = await adminSupabase
+      .from("job_benefits")
+      .insert(rows)
+      .select();
+
+    console.log("Inserted benefits:", data);
 
     if (error) {
-      console.error("Update benefits error:", error);
+      console.error("INSERT BENEFITS ERROR:", error);
 
       return {
-        error: "Job was updated but benefits could not be saved.",
+        error: `Benefits save failed: ${error.message}`,
       };
     }
   }
@@ -848,7 +887,7 @@ export async function updateJob(formData: FormData) {
      REPLACE SKILLS
   ===================================================== */
 
-  const { error: deleteSkillsError } = await supabase
+  const { error: deleteSkillsError } = await adminSupabase
     .from("job_skills")
     .delete()
     .eq("job_id", jobId);
@@ -866,7 +905,7 @@ export async function updateJob(formData: FormData) {
     skill_id: skillId,
   }));
 
-  const { error: skillsError } = await supabase
+  const { error: skillsError } = await adminSupabase
     .from("job_skills")
     .insert(jobSkills);
 
@@ -916,11 +955,13 @@ export async function deleteJob(jobId: string) {
     };
   }
 
+  const adminSupabase = createAdminClient();
+
   /* -----------------------------
      Delete locations
   ----------------------------- */
 
-  const { error: locationsError } = await supabase
+  const { error: locationsError } = await adminSupabase
     .from("job_locations")
     .delete()
     .eq("job_id", jobId);
@@ -937,7 +978,7 @@ export async function deleteJob(jobId: string) {
      Delete responsibilities
   ----------------------------- */
 
-  const { error: responsibilitiesError } = await supabase
+  const { error: responsibilitiesError } = await adminSupabase
     .from("job_responsibilities")
     .delete()
     .eq("job_id", jobId);
@@ -954,7 +995,7 @@ export async function deleteJob(jobId: string) {
      Delete requirements
   ----------------------------- */
 
-  const { error: requirementsError } = await supabase
+  const { error: requirementsError } = await adminSupabase
     .from("job_requirements")
     .delete()
     .eq("job_id", jobId);
@@ -971,7 +1012,7 @@ export async function deleteJob(jobId: string) {
      Delete benefits
   ----------------------------- */
 
-  const { error: benefitsError } = await supabase
+  const { error: benefitsError } = await adminSupabase
     .from("job_benefits")
     .delete()
     .eq("job_id", jobId);
@@ -988,7 +1029,7 @@ export async function deleteJob(jobId: string) {
      Delete skills
   ----------------------------- */
 
-  const { error: skillsError } = await supabase
+  const { error: skillsError } = await adminSupabase
     .from("job_skills")
     .delete()
     .eq("job_id", jobId);
@@ -1005,7 +1046,7 @@ export async function deleteJob(jobId: string) {
      Delete main job
   ----------------------------- */
 
-  const { error: jobError } = await supabase
+  const { error: jobError } = await adminSupabase
     .from("jobs")
     .delete()
     .eq("id", jobId);
@@ -1052,7 +1093,9 @@ export async function toggleJobPublished(jobId: string, isPublished: boolean) {
     };
   }
 
-  const { error } = await supabase
+  const adminSupabase = createAdminClient();
+
+  const { error } = await adminSupabase
     .from("jobs")
     .update({
       is_published: isPublished,
