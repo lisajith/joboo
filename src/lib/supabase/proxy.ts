@@ -7,12 +7,14 @@ export async function updateSession(request: NextRequest) {
 
   if (hostname === "joboo.whereismyjob.workers.dev") {
     const url = request.nextUrl.clone();
+
     url.protocol = "https:";
     url.hostname = "whereismyjob.vercel.app";
 
     return NextResponse.redirect(url, 308);
   }
 
+  // Normal Supabase session handling
   let supabaseResponse = NextResponse.next({
     request,
   });
