@@ -4,9 +4,7 @@ export const siteConfig = {
   description:
     "Where Is My Job? is a job discovery platform for freshers, graduates, and early-career professionals to discover jobs, internships, companies, and career opportunities.",
 
-  url:
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://joboo.whereismyjob.workers.dev",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://whereismyjob.vercel.app",
 
   creator: {
     name: "Ajith Kumar Malle",

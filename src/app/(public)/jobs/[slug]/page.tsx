@@ -31,7 +31,7 @@ type JobDetailsPageProps = {
 };
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://joboo.whereismyjob.workers.dev";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://whereismyjob.vercel.app";
 
 /* =========================================================
    METADATA
