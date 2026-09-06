@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 import StructuredData from "@/components/seo/StructuredData";
@@ -115,6 +116,12 @@ export default function RootLayout({
       <body className="min-h-full">
         <StructuredData />
         {children}
+
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9680067449978841"
+          crossOrigin="anonymous"
+        ></script>
       </body>
     </html>
   );
