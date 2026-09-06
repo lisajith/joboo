@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyIndexNow } from "@/lib/indexnow";
 
 /* =========================================================
    HELPERS
@@ -94,7 +95,6 @@ export async function createJob(formData: FormData) {
     };
   }
 
-  // Admin client is used only after admin verification
   const adminSupabase = createAdminClient();
 
   /* -----------------------------
@@ -146,9 +146,7 @@ export async function createJob(formData: FormData) {
   const description = String(formData.get("description") || "").trim();
 
   const responsibilities = getLines(formData, "responsibilities");
-
   const requirements = getLines(formData, "requirements");
-
   const benefits = getLines(formData, "benefits");
 
   /* -----------------------------
@@ -180,7 +178,6 @@ export async function createJob(formData: FormData) {
   ----------------------------- */
 
   const isPublished = formData.get("isPublished") === "true";
-
   const isVerified = formData.get("isVerified") === "true";
 
   /* -----------------------------
@@ -447,6 +444,14 @@ export async function createJob(formData: FormData) {
     };
   }
 
+  /* =====================================================
+     INDEXNOW
+  ===================================================== */
+
+  if (isPublished) {
+    await notifyIndexNow([`https://whereismyjob.vercel.app/jobs/${slug}`]);
+  }
+
   redirect("/admin/jobs");
 }
 
@@ -490,7 +495,6 @@ export async function updateJob(formData: FormData) {
     };
   }
 
-  // Use secret client after admin verification
   const adminSupabase = createAdminClient();
 
   /* -----------------------------
@@ -498,14 +502,19 @@ export async function updateJob(formData: FormData) {
   ----------------------------- */
 
   const jobId = String(formData.get("jobId") || "");
+
   const title = String(formData.get("title") || "").trim();
+
   const companyId = String(formData.get("companyId") || "");
+
   const categoryId = String(formData.get("categoryId") || "");
 
   const finalLocations = getFinalLocations(formData);
 
   const jobType = String(formData.get("jobType") || "");
+
   const workMode = String(formData.get("workMode") || "");
+
   const experience = String(formData.get("experience") || "").trim();
 
   /* -----------------------------
@@ -513,10 +522,13 @@ export async function updateJob(formData: FormData) {
   ----------------------------- */
 
   const salaryMinValue = String(formData.get("salaryMin") || "");
+
   const salaryMaxValue = String(formData.get("salaryMax") || "");
+
   const salaryPeriod = String(formData.get("salaryPeriod") || "");
 
   const salaryMin = salaryMinValue ? Number(salaryMinValue) : null;
+
   const salaryMax = salaryMaxValue ? Number(salaryMaxValue) : null;
 
   const salaryDisclosed = formData.get("salaryDisclosed") === "true";
@@ -526,6 +538,7 @@ export async function updateJob(formData: FormData) {
   ----------------------------- */
 
   const postedAt = String(formData.get("postedAt") || "");
+
   const deadline = String(formData.get("deadline") || "");
 
   /* -----------------------------
@@ -543,10 +556,12 @@ export async function updateJob(formData: FormData) {
   const benefits = getLines(formData, "benefits");
 
   console.log("========== UPDATE JOB CONTENT ==========");
+
   console.log("Job ID:", jobId);
   console.log("Responsibilities:", responsibilities);
   console.log("Requirements:", requirements);
   console.log("Benefits:", benefits);
+
   console.log("========================================");
 
   /* -----------------------------
@@ -633,6 +648,29 @@ export async function updateJob(formData: FormData) {
     };
   }
 
+  /* =====================================================
+     GET EXISTING JOB
+     
+     IMPORTANT:
+     We preserve the existing slug.
+     This prevents the public SEO URL from changing
+     every time the job is edited.
+  ===================================================== */
+
+  const { data: existingJob, error: existingJobError } = await adminSupabase
+    .from("jobs")
+    .select("slug, is_published")
+    .eq("id", jobId)
+    .single();
+
+  if (existingJobError || !existingJob) {
+    return {
+      error: "Job could not be found.",
+    };
+  }
+
+  const slug = existingJob.slug;
+
   /* -----------------------------
      Get company
   ----------------------------- */
@@ -649,8 +687,6 @@ export async function updateJob(formData: FormData) {
     };
   }
 
-  const slug = createSlug(title, company.name);
-
   /* =====================================================
      UPDATE MAIN JOB
   ===================================================== */
@@ -659,7 +695,9 @@ export async function updateJob(formData: FormData) {
     .from("jobs")
     .update({
       title,
+
       slug,
+
       company_id: companyId,
       category_id: categoryId,
 
@@ -917,6 +955,21 @@ export async function updateJob(formData: FormData) {
     };
   }
 
+  /* =====================================================
+     INDEXNOW
+     
+     Notify when:
+     - job was already published and updated
+     - job is being published now
+     - job is being unpublished
+     
+     This keeps the search engine aware of changes.
+  ===================================================== */
+
+  if (existingJob.is_published || isPublished) {
+    await notifyIndexNow([`https://whereismyjob.vercel.app/jobs/${slug}`]);
+  }
+
   redirect("/admin/jobs");
 }
 
@@ -956,6 +1009,22 @@ export async function deleteJob(jobId: string) {
   }
 
   const adminSupabase = createAdminClient();
+
+  /* =====================================================
+     GET JOB SLUG BEFORE DELETING
+  ===================================================== */
+
+  const { data: job, error: jobFetchError } = await adminSupabase
+    .from("jobs")
+    .select("slug")
+    .eq("id", jobId)
+    .single();
+
+  if (jobFetchError || !job) {
+    return {
+      error: "Job could not be found.",
+    };
+  }
 
   /* -----------------------------
      Delete locations
@@ -1001,7 +1070,7 @@ export async function deleteJob(jobId: string) {
     .eq("job_id", jobId);
 
   if (requirementsError) {
-    console.error("Delete requirements error:", requirementsError);
+    console.error("Delete job requirements error:", requirementsError);
 
     return {
       error: "Failed to remove job requirements.",
@@ -1059,6 +1128,14 @@ export async function deleteJob(jobId: string) {
     };
   }
 
+  /* =====================================================
+     INDEXNOW
+     
+     Notify search engines that the URL changed/was removed.
+  ===================================================== */
+
+  await notifyIndexNow([`https://whereismyjob.vercel.app/jobs/${job.slug}`]);
+
   return {
     success: true,
   };
@@ -1093,7 +1170,33 @@ export async function toggleJobPublished(jobId: string, isPublished: boolean) {
     };
   }
 
+  if (!jobId) {
+    return {
+      error: "Invalid job.",
+    };
+  }
+
   const adminSupabase = createAdminClient();
+
+  /* =====================================================
+     GET JOB SLUG
+  ===================================================== */
+
+  const { data: job, error: jobFetchError } = await adminSupabase
+    .from("jobs")
+    .select("slug")
+    .eq("id", jobId)
+    .single();
+
+  if (jobFetchError || !job) {
+    return {
+      error: "Job could not be found.",
+    };
+  }
+
+  /* =====================================================
+     UPDATE PUBLISHED STATUS
+  ===================================================== */
 
   const { error } = await adminSupabase
     .from("jobs")
@@ -1110,6 +1213,18 @@ export async function toggleJobPublished(jobId: string, isPublished: boolean) {
       error: error.message || "Failed to update job status.",
     };
   }
+
+  /* =====================================================
+     INDEXNOW
+     
+     Notify for BOTH:
+     - publishing
+     - unpublishing
+     
+     because both change the public search/index state.
+  ===================================================== */
+
+  await notifyIndexNow([`https://whereismyjob.vercel.app/jobs/${job.slug}`]);
 
   return {
     success: true,
