@@ -12,18 +12,40 @@ export async function getRelatedJobs(
       id,
       slug,
       title,
-      location,
       job_type,
+      work_mode,
       experience,
+      salary_min,
+      salary_max,
+      salary_period,
+      salary_disclosed,
       posted_at,
+      deadline,
+      description,
+      application_url,
+      application_source,
+      is_verified,
+
       companies (
         name,
         slug,
         logo_url
       ),
+
       categories (
         name,
         slug
+      ),
+
+      job_locations (
+        location
+      ),
+
+      job_skills (
+        skills (
+          name,
+          slug
+        )
       )
     `,
     )
@@ -47,6 +69,18 @@ export async function getRelatedJobs(
       ? job.categories[0]
       : job.categories;
 
+    const locations =
+      job.job_locations?.map((item) => item.location).filter(Boolean) ?? [];
+
+    const skills =
+      job.job_skills?.flatMap((jobSkill) => {
+        const skill = Array.isArray(jobSkill.skills)
+          ? jobSkill.skills[0]
+          : jobSkill.skills;
+
+        return skill?.name ? [skill.name] : [];
+      }) ?? [];
+
     return {
       id: job.id,
       slug: job.slug,
@@ -63,23 +97,33 @@ export async function getRelatedJobs(
         slug: category?.slug ?? "",
       },
 
-      location: job.location,
+      locations,
+
       type: job.job_type,
+      workMode: job.work_mode,
       experience: job.experience,
 
-      salaryMin: null,
-      salaryMax: null,
-      salaryPeriod: null,
+      salaryMin: job.salary_min,
+      salaryMax: job.salary_max,
+      salaryPeriod: job.salary_period,
+      salaryDisclosed: job.salary_disclosed,
 
       postedAt: job.posted_at,
-      deadline: null,
+      deadline: job.deadline,
 
-      description: "",
+      description: job.description,
+
+      education: [],
+      graduationYears: [],
       eligibility: [],
 
-      skills: [],
+      skills,
 
-      applicationUrl: "",
+      applicationUrl: job.application_url,
+      applicationSource: job.application_source,
+
+      isVerified: job.is_verified,
+      verifiedAt: null,
     };
   });
 }

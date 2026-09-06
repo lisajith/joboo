@@ -29,29 +29,43 @@ export default async function SavedJobsPage() {
         title,
         location,
         job_type,
+        work_mode,
         experience,
         salary_min,
         salary_max,
         salary_period,
+        salary_disclosed,
+        education,
+        graduation_years,
         posted_at,
         deadline,
         description,
         eligibility,
         application_url,
+        application_source,
+        is_verified,
+        verified_at,
+
         companies (
           name,
           slug,
           logo_url
         ),
+
         categories (
           name,
           slug
         ),
+
         job_skills (
           skills (
             name,
             slug
           )
+        ),
+
+        job_locations (
+          location
         )
       )
     `,
@@ -115,6 +129,11 @@ export default async function SavedJobsPage() {
         })
         .filter((skill): skill is string => skill !== null) ?? [];
 
+    const locations =
+      rawJob.job_locations
+        ?.map((locationItem) => locationItem.location)
+        .filter((location): location is string => Boolean(location)) ?? [];
+
     if (!companyData || !categoryData) continue;
 
     savedJobs.push({
@@ -133,27 +152,38 @@ export default async function SavedJobsPage() {
         slug: categoryData.slug,
       },
 
-      location: rawJob.location,
+      locations:
+        locations.length > 0
+          ? locations
+          : rawJob.location
+            ? [rawJob.location]
+            : [],
 
       type: rawJob.job_type,
-
+      workMode: rawJob.work_mode,
       experience: rawJob.experience,
 
       salaryMin: rawJob.salary_min,
       salaryMax: rawJob.salary_max,
       salaryPeriod: rawJob.salary_period,
+      salaryDisclosed: rawJob.salary_disclosed ?? true,
 
       postedAt: rawJob.posted_at,
-
       deadline: rawJob.deadline,
 
       description: rawJob.description,
 
+      education: rawJob.education ?? [],
+      graduationYears: rawJob.graduation_years ?? [],
       eligibility: rawJob.eligibility ?? [],
 
       skills,
 
       applicationUrl: rawJob.application_url,
+      applicationSource: rawJob.application_source,
+
+      isVerified: rawJob.is_verified ?? false,
+      verifiedAt: rawJob.verified_at,
     });
   }
 

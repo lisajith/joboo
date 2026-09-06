@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowUpRight, BriefcaseBusiness, MapPin, Clock3 } from "lucide-react";
+import {
+  ArrowUpRight,
+  BriefcaseBusiness,
+  MapPin,
+  Clock3,
+  House,
+  BadgeCheck,
+} from "lucide-react";
 
 import type { Job } from "@/types/job";
 import { formatPostedTime } from "@/lib/job-utils";
@@ -10,9 +17,15 @@ type JobCardProps = Pick<
   | "slug"
   | "title"
   | "company"
-  | "location"
+  | "locations"
   | "type"
+  | "workMode"
   | "experience"
+  | "salaryMin"
+  | "salaryMax"
+  | "salaryPeriod"
+  | "salaryDisclosed"
+  | "isVerified"
   | "postedAt"
 >;
 
@@ -20,11 +33,35 @@ export default function JobCard({
   slug,
   title,
   company,
-  location,
+  locations,
   type,
+  workMode,
   experience,
+  salaryMin,
+  salaryMax,
+  salaryPeriod,
+  salaryDisclosed,
+  isVerified,
   postedAt,
 }: JobCardProps) {
+  const formattedLocations =
+    locations.length > 0 ? locations.join(", ") : "Location not specified";
+
+  const salary =
+    salaryDisclosed && (salaryMin !== null || salaryMax !== null)
+      ? salaryMin !== null && salaryMax !== null
+        ? `₹${salaryMin.toLocaleString()} – ₹${salaryMax.toLocaleString()} ${
+            salaryPeriod === "year" ? "LPA" : "per month"
+          }`
+        : salaryMin !== null
+          ? `From ₹${salaryMin.toLocaleString()} ${
+              salaryPeriod === "year" ? "LPA" : "per month"
+            }`
+          : `Up to ₹${salaryMax?.toLocaleString()} ${
+              salaryPeriod === "year" ? "LPA" : "per month"
+            }`
+      : null;
+
   return (
     <Link
       href={`/jobs/${slug}`}
@@ -54,19 +91,30 @@ export default function JobCard({
       </div>
 
       <div className="mt-5">
-        <p className="text-sm font-semibold text-primary">{company.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-primary">{company.name}</p>
+
+          {isVerified && (
+            <BadgeCheck
+              size={16}
+              className="text-primary"
+              aria-label="Verified job"
+            />
+          )}
+        </div>
 
         <h3 className="mt-1 font-heading text-xl font-bold tracking-tight text-foreground">
           {title}
         </h3>
       </div>
 
+      {/* Job Information */}
       <div className="mt-5 flex flex-wrap gap-2">
-        {/* Location */}
+        {/* Locations */}
         <span className="rounded-full bg-surface-soft px-3 py-1.5 text-xs font-semibold text-muted">
           <span className="inline-flex items-center gap-1.5">
             <MapPin size={13} />
-            {location}
+            {formattedLocations}
           </span>
         </span>
 
@@ -78,11 +126,26 @@ export default function JobCard({
           </span>
         </span>
 
+        {/* Work Mode */}
+        {workMode && (
+          <span className="rounded-full bg-surface-soft px-3 py-1.5 text-xs font-semibold text-muted">
+            <span className="inline-flex items-center gap-1.5">
+              <House size={13} />
+              {workMode}
+            </span>
+          </span>
+        )}
+
         {/* Experience */}
         <span className="rounded-full bg-surface-soft px-3 py-1.5 text-xs font-semibold text-muted">
           {experience}
         </span>
       </div>
+
+      {/* Salary */}
+      {salary && (
+        <p className="mt-4 text-sm font-bold text-foreground">{salary}</p>
+      )}
 
       <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
         {/* Posted Time */}

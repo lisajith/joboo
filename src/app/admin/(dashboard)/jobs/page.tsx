@@ -164,10 +164,10 @@ export default async function AdminJobsPage() {
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-2">
                             {/* Publish / Unpublish */}
-                            <ToggleJobStatusButton
+                            {/* <ToggleJobStatusButton
                               jobId={job.id}
                               isPublished={job.is_published}
-                            />
+                            /> */}
 
                             {/* Edit */}
                             <Link

@@ -126,15 +126,22 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
       title,
       location,
       job_type,
+      work_mode,
       experience,
       salary_min,
       salary_max,
       salary_period,
+      salary_disclosed,
+      education,
+      graduation_years,
       posted_at,
       deadline,
       description,
       eligibility,
       application_url,
+      application_source,
+      is_verified,
+      verified_at,
 
       companies (
         name,
@@ -152,6 +159,25 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
           name,
           slug
         )
+      ),
+
+      job_locations (
+        location
+      ),
+
+      job_responsibilities (
+        responsibility,
+        position
+      ),
+
+      job_requirements (
+        requirement,
+        position
+      ),
+
+      job_benefits (
+        benefit,
+        position
       )
       `,
     )
@@ -182,6 +208,27 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
         return skill?.name ? [skill.name] : [];
       }) ?? [];
 
+    const locations =
+      job.job_locations?.map((item) => item.location).filter(Boolean) ?? [];
+
+    const responsibilities =
+      job.job_responsibilities
+        ?.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((item) => item.responsibility)
+        .filter(Boolean) ?? [];
+
+    const requirements =
+      job.job_requirements
+        ?.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((item) => item.requirement)
+        .filter(Boolean) ?? [];
+
+    const benefits =
+      job.job_benefits
+        ?.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((item) => item.benefit)
+        .filter(Boolean) ?? [];
+
     return {
       id: job.id,
       slug: job.slug,
@@ -198,13 +245,20 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
         slug: category?.slug ?? "",
       },
 
-      location: job.location,
+      locations:
+        locations.length > 0 ? locations : job.location ? [job.location] : [],
+
       type: job.job_type,
+      workMode: job.work_mode,
       experience: job.experience,
 
       salaryMin: job.salary_min,
       salaryMax: job.salary_max,
       salaryPeriod: job.salary_period,
+      salaryDisclosed: job.salary_disclosed ?? true,
+
+      education: job.education ?? [],
+      graduationYears: job.graduation_years ?? [],
 
       postedAt: job.posted_at,
       deadline: job.deadline,
@@ -212,9 +266,16 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
       description: job.description,
       eligibility: job.eligibility ?? [],
 
+      responsibilities,
+      requirements,
+      benefits,
+
       skills,
 
       applicationUrl: job.application_url,
+      applicationSource: job.application_source,
+      isVerified: job.is_verified ?? false,
+      verifiedAt: job.verified_at,
     };
   });
 

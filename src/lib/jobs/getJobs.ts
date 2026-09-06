@@ -9,17 +9,23 @@ export async function getJobs(): Promise<Job[]> {
       id,
       slug,
       title,
-      location,
       job_type,
+      work_mode,
       experience,
       salary_min,
       salary_max,
       salary_period,
+      salary_disclosed,
       posted_at,
       deadline,
       description,
+      education,
+      graduation_years,
       eligibility,
       application_url,
+      application_source,
+      is_verified,
+      verified_at,
 
       companies (
         name,
@@ -37,6 +43,10 @@ export async function getJobs(): Promise<Job[]> {
           name,
           slug
         )
+      ),
+
+      job_locations (
+        location
       )
     `,
     )
@@ -66,6 +76,9 @@ export async function getJobs(): Promise<Job[]> {
         return skill?.name ? [skill.name] : [];
       }) ?? [];
 
+    const locations =
+      job.job_locations?.map((item) => item.location).filter(Boolean) ?? [];
+
     return {
       id: job.id,
       slug: job.slug,
@@ -82,24 +95,33 @@ export async function getJobs(): Promise<Job[]> {
         slug: category?.slug ?? "",
       },
 
-      location: job.location,
+      locations,
+
       type: job.job_type,
+      workMode: job.work_mode,
       experience: job.experience,
 
       salaryMin: job.salary_min,
       salaryMax: job.salary_max,
       salaryPeriod: job.salary_period,
+      salaryDisclosed: job.salary_disclosed,
 
       postedAt: job.posted_at,
       deadline: job.deadline,
 
       description: job.description,
 
+      education: job.education ?? [],
+      graduationYears: job.graduation_years ?? [],
       eligibility: job.eligibility ?? [],
 
       skills,
 
       applicationUrl: job.application_url,
+      applicationSource: job.application_source,
+
+      isVerified: job.is_verified,
+      verifiedAt: job.verified_at,
     };
   });
 }

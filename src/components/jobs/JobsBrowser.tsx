@@ -80,7 +80,10 @@ export default function JobsBrowser({
 
       /* Search location */
       const matchesSearchLocation =
-        !searchLocation || job.location.toLowerCase().includes(searchLocation);
+        !searchLocation ||
+        job.locations.some((jobLocation) =>
+          jobLocation.toLowerCase().includes(searchLocation),
+        );
 
       /* Experience */
       const matchesExperience = !experience || job.experience === experience;
@@ -93,7 +96,10 @@ export default function JobsBrowser({
 
       /* Filter location */
       const matchesLocation =
-        !filterLocation || job.location.toLowerCase().includes(filterLocation);
+        !filterLocation ||
+        job.locations.some((jobLocation) =>
+          jobLocation.toLowerCase().includes(filterLocation),
+        );
 
       return (
         matchesSearch &&

@@ -1,12 +1,11 @@
 import Link from "next/link";
-import type { Metadata } from "next";
+import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BriefcaseBusiness } from "lucide-react";
+import type { Metadata } from "next";
 
-import JobCard from "@/components/jobs/JobCard";
 import { supabase } from "@/lib/supabase/client";
+import JobCard from "@/components/jobs/JobCard";
 import type { Job } from "@/types/job";
-import { createClient } from "@/lib/supabase/server";
 
 type CategoryPageProps = {
   params: Promise<{
@@ -19,73 +18,43 @@ export async function generateMetadata({
 }: CategoryPageProps): Promise<Metadata> {
   const { slug } = await params;
 
-  const supabase = await createClient();
-
-  const { data: category, error } = await supabase
+  const { data: category } = await supabase
     .from("categories")
-    .select("id, name, slug, description")
+    .select("name, slug")
     .eq("slug", slug)
     .maybeSingle();
 
-  if (error || !category) {
+  if (!category) {
     return {
-      title: "Category Not Found",
-      description: "The job category you are looking for could not be found.",
+      title: "Category Not Found | Where Is My Job?",
     };
   }
 
-  const title = `${category.name} Jobs for Freshers`;
-
-  const description =
-    category.description ||
-    `Find the latest ${category.name} jobs and career opportunities for freshers and job seekers.`;
-
   return {
-    title,
-    description,
-
+    title: `${category.name} Jobs | Where Is My Job?`,
+    description: `Find the latest ${category.name} job openings for freshers and experienced candidates on Where Is My Job?`,
     alternates: {
-      canonical: `/jobs/category/${slug}`,
+      canonical: `/jobs/category/${category.slug}`,
     },
-
     openGraph: {
+      title: `${category.name} Jobs | Where Is My Job?`,
+      description: `Explore ${category.name} job opportunities on Where Is My Job?`,
+      url: `/jobs/category/${category.slug}`,
       type: "website",
-      title: `${title} | Where Is My Job?`,
-      description,
-      url: `/jobs/category/${slug}`,
-      siteName: "Where Is My Job?",
-      images: [
-        {
-          url: "/Job.png",
-          width: 1200,
-          height: 630,
-          alt: "Where Is My Job?",
-        },
-      ],
-    },
-
-    twitter: {
-      card: "summary_large_image",
-      title: `${title} | Where Is My Job?`,
-      description,
-      images: ["/Job.png"],
-    },
-
-    robots: {
-      index: true,
-      follow: true,
     },
   };
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const supabase = await createClient();
 
+  // ----------------------------------------
   // Get category
+  // ----------------------------------------
+
   const { data: category, error: categoryError } = await supabase
     .from("categories")
-    .select("id, name, slug, description")
+    .select("id, name, slug")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -98,31 +67,39 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
+  // ----------------------------------------
   // Get jobs
-  const { data: jobs, error: jobsError } = await supabase
+  // ----------------------------------------
+
+  const { data: jobsData, error: jobsError } = await supabase
     .from("jobs")
     .select(
       `
       id,
       slug,
       title,
-      location,
       job_type,
+      work_mode,
       experience,
       salary_min,
       salary_max,
       salary_period,
+      salary_disclosed,
       posted_at,
       deadline,
       description,
+      education,
+      graduation_years,
       eligibility,
       application_url,
+      application_source,
+      is_verified,
+      verified_at,
 
       companies (
         name,
         slug,
-        logo_url,
-        website
+        logo_url
       ),
 
       categories (
@@ -135,6 +112,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           name,
           slug
         )
+      ),
+
+      job_locations (
+        location
       )
     `,
     )
@@ -144,10 +125,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   if (jobsError) {
     console.error("Error fetching category jobs:", jobsError);
-    throw new Error("Failed to fetch category jobs");
+    throw new Error("Failed to fetch jobs");
   }
 
-  const formattedJobs: Job[] = (jobs ?? []).map((job) => {
+  // ----------------------------------------
+  // Convert Supabase data → Job type
+  // ----------------------------------------
+
+  const jobs: Job[] = (jobsData ?? []).map((job) => {
     const company = Array.isArray(job.companies)
       ? job.companies[0]
       : job.companies;
@@ -155,6 +140,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     const jobCategory = Array.isArray(job.categories)
       ? job.categories[0]
       : job.categories;
+
+    const locations =
+      job.job_locations?.map((item) => item.location).filter(Boolean) ?? [];
 
     const skills =
       job.job_skills?.flatMap((jobSkill) => {
@@ -181,134 +169,114 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         slug: jobCategory?.slug ?? category.slug,
       },
 
-      location: job.location,
+      locations,
+
       type: job.job_type,
+      workMode: job.work_mode,
       experience: job.experience,
 
       salaryMin: job.salary_min,
       salaryMax: job.salary_max,
       salaryPeriod: job.salary_period,
+      salaryDisclosed: job.salary_disclosed,
 
       postedAt: job.posted_at,
       deadline: job.deadline,
 
       description: job.description,
+
+      education: job.education ?? [],
+      graduationYears: job.graduation_years ?? [],
       eligibility: job.eligibility ?? [],
 
       skills,
 
       applicationUrl: job.application_url,
+      applicationSource: job.application_source,
+
+      isVerified: job.is_verified,
+      verifiedAt: job.verified_at,
     };
   });
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
-      <section className="px-5 pb-12 pt-10 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <Link
-            href="/jobs"
-            className="inline-flex items-center gap-2 text-sm font-bold text-muted transition hover:text-primary"
-          >
-            <ArrowLeft size={17} />
-            Back to jobs
-          </Link>
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        {/* Back */}
+        <Link
+          href="/jobs"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-muted transition hover:text-primary"
+        >
+          <ArrowLeft size={16} />
+          All jobs
+        </Link>
 
-          <div className="mt-8 rounded-4xl border border-border bg-white p-6 shadow-sm md:p-10">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white">
-                    <BriefcaseBusiness size={23} />
-                  </div>
+        {/* Header */}
+        <div className="mt-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
+            Job category
+          </p>
 
-                  <p className="text-sm font-bold uppercase tracking-widest text-primary">
-                    Job category
-                  </p>
-                </div>
+          <h1 className="mt-2 font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+            {category.name} Jobs
+          </h1>
 
-                <h1 className="mt-5 font-heading text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-                  {category.name} Jobs
-                </h1>
-
-                <p className="mt-4 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-                  {category.description ??
-                    `Explore the latest ${category.name} opportunities and find a role that matches your skills and career goals.`}
-                </p>
-              </div>
-
-              <div className="w-fit rounded-2xl bg-surface-soft px-5 py-4">
-                <p className="text-xs font-semibold text-muted">
-                  Available opportunities
-                </p>
-
-                <p className="mt-1 font-heading text-3xl font-bold text-foreground">
-                  {formattedJobs.length}
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
+            Explore the latest {category.name} job opportunities and find the
+            right role for your career.
+          </p>
         </div>
-      </section>
 
-      {/* Jobs */}
-      <section className="bg-surface-soft px-5 py-12 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-primary">
-                Open positions
-              </p>
+        {/* Job count */}
+        <div className="mt-8 flex items-center justify-between border-b border-border pb-5">
+          <p className="text-sm font-semibold text-muted">
+            {jobs.length} {jobs.length === 1 ? "job" : "jobs"} found
+          </p>
+        </div>
 
-              <h2 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground">
-                Latest {category.name} jobs
-              </h2>
-            </div>
+        {/* Jobs */}
+        {jobs.length > 0 ? (
+          <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {jobs.map((job) => (
+              <JobCard
+                key={job.id}
+                id={job.id}
+                slug={job.slug}
+                title={job.title}
+                company={job.company}
+                locations={job.locations}
+                type={job.type}
+                workMode={job.workMode}
+                experience={job.experience}
+                salaryMin={job.salaryMin}
+                salaryMax={job.salaryMax}
+                salaryPeriod={job.salaryPeriod}
+                salaryDisclosed={job.salaryDisclosed}
+                isVerified={job.isVerified}
+                postedAt={job.postedAt}
+              />
+            ))}
+          </section>
+        ) : (
+          <div className="mt-10 rounded-3xl border border-border bg-white px-6 py-16 text-center">
+            <h2 className="font-heading text-2xl font-bold text-foreground">
+              No jobs found
+            </h2>
+
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
+              There are currently no published jobs in this category. Check back
+              soon for new opportunities.
+            </p>
 
             <Link
               href="/jobs"
-              className="hidden text-sm font-bold text-foreground transition hover:text-primary sm:block"
+              className="mt-6 inline-flex items-center rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
             >
-              View all jobs →
+              Browse all jobs
             </Link>
           </div>
-
-          {formattedJobs.length > 0 ? (
-            <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {formattedJobs.map((job) => (
-                <JobCard key={job.slug} {...job} />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-8 rounded-3xl border border-border bg-white p-10 text-center">
-              <BriefcaseBusiness size={32} className="mx-auto text-muted" />
-
-              <h3 className="mt-4 font-heading text-xl font-bold">
-                No jobs available yet
-              </h3>
-
-              <p className="mt-2 text-sm text-muted">
-                We haven't added any jobs to this category yet. Check back soon
-                for new opportunities.
-              </p>
-
-              <Link
-                href="/jobs"
-                className="mt-6 inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-primary-dark"
-              >
-                Browse all jobs
-              </Link>
-            </div>
-          )}
-
-          <Link
-            href="/jobs"
-            className="mt-8 block text-center text-sm font-bold text-primary sm:hidden"
-          >
-            View all jobs →
-          </Link>
-        </div>
-      </section>
+        )}
+      </div>
     </main>
   );
 }

@@ -3,6 +3,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+/* =========================================================
+   HELPERS
+========================================================= */
+
 function createSlug(title: string, company: string) {
   const base = `${title}-${company}`
     .toLowerCase()
@@ -13,10 +17,57 @@ function createSlug(title: string, company: string) {
   return `${base}-${Date.now()}`;
 }
 
+function getList(formData: FormData, name: string) {
+  return formData
+    .getAll(name)
+    .map(String)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getLines(formData: FormData, name: string) {
+  const raw = String(formData.get(name) || "").trim();
+
+  return raw
+    ? raw
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+}
+
+function getNumberArray(formData: FormData, name: string) {
+  return formData
+    .getAll(name)
+    .map(Number)
+    .filter((value) => !Number.isNaN(value));
+}
+
+function getFinalLocations(formData: FormData) {
+  const oldLocation = String(formData.get("location") || "").trim();
+
+  const locations = getList(formData, "locations");
+
+  const rawLocations =
+    locations.length > 0 ? locations : oldLocation ? [oldLocation] : [];
+
+  // Remove duplicate locations
+  return Array.from(
+    new Set(rawLocations.map((location) => location.trim()).filter(Boolean)),
+  );
+}
+
+/* =========================================================
+   CREATE JOB
+========================================================= */
+
 export async function createJob(formData: FormData) {
   const supabase = await createClient();
 
-  // Check logged-in user
+  /* -----------------------------
+     Authentication
+  ----------------------------- */
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -27,7 +78,10 @@ export async function createJob(formData: FormData) {
     };
   }
 
-  // Check admin role
+  /* -----------------------------
+     Admin check
+  ----------------------------- */
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -40,31 +94,103 @@ export async function createJob(formData: FormData) {
     };
   }
 
+  /* -----------------------------
+     Basic information
+  ----------------------------- */
+
   const title = String(formData.get("title") || "").trim();
   const companyId = String(formData.get("companyId") || "");
   const categoryId = String(formData.get("categoryId") || "");
-  const location = String(formData.get("location") || "").trim();
+
+  const finalLocations = getFinalLocations(formData);
+
   const jobType = String(formData.get("jobType") || "");
+  const workMode = String(formData.get("workMode") || "");
   const experience = String(formData.get("experience") || "").trim();
+
+  /* -----------------------------
+     Salary
+  ----------------------------- */
+
   const salaryMinValue = String(formData.get("salaryMin") || "");
   const salaryMaxValue = String(formData.get("salaryMax") || "");
   const salaryPeriod = String(formData.get("salaryPeriod") || "");
+
+  const salaryMin = salaryMinValue ? Number(salaryMinValue) : null;
+  const salaryMax = salaryMaxValue ? Number(salaryMaxValue) : null;
+
+  const salaryDisclosed = formData.has("salaryDisclosed")
+    ? formData.get("salaryDisclosed") === "true"
+    : salaryMin !== null || salaryMax !== null;
+
+  /* -----------------------------
+     Candidate requirements
+  ----------------------------- */
+
+  const education = getList(formData, "education");
+  const graduationYears = getNumberArray(formData, "graduationYears");
+  const eligibility = getLines(formData, "eligibility");
+
+  /* -----------------------------
+     Dates
+  ----------------------------- */
+
   const postedAt = String(formData.get("postedAt") || "");
   const deadline = String(formData.get("deadline") || "");
+
+  /* -----------------------------
+     Job content
+  ----------------------------- */
+
   const description = String(formData.get("description") || "").trim();
-  const eligibilityRaw = String(formData.get("eligibility") || "").trim();
+
+  const responsibilities = getLines(formData, "responsibilities");
+
+  const requirements = getLines(formData, "requirements");
+
+  const benefits = getLines(formData, "benefits");
+
+  /* -----------------------------
+     Application
+  ----------------------------- */
+
   const applicationUrl = String(formData.get("applicationUrl") || "").trim();
 
-  const skills = formData.getAll("skills").map(String);
+  const applicationSource = String(
+    formData.get("applicationSource") || "",
+  ).trim();
+
+  /* -----------------------------
+     Skills
+  ----------------------------- */
+
+  const skills = Array.from(
+    new Set(
+      formData
+        .getAll("skills")
+        .map(String)
+        .map((skill) => skill.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  /* -----------------------------
+     Publishing / verification
+  ----------------------------- */
 
   const isPublished = formData.get("isPublished") === "true";
 
-  // Basic validation
+  const isVerified = formData.get("isVerified") === "true";
+
+  /* -----------------------------
+     Validation
+  ----------------------------- */
+
   if (
     !title ||
     !companyId ||
     !categoryId ||
-    !location ||
+    finalLocations.length === 0 ||
     !jobType ||
     !experience ||
     !description ||
@@ -80,175 +206,6 @@ export async function createJob(formData: FormData) {
       error: "Please select at least one skill.",
     };
   }
-
-  // Get company name for slug
-  const { data: company, error: companyError } = await supabase
-    .from("companies")
-    .select("name")
-    .eq("id", companyId)
-    .single();
-
-  if (companyError || !company) {
-    return {
-      error: "Selected company could not be found.",
-    };
-  }
-
-  const slug = createSlug(title, company.name);
-
-  const eligibility = eligibilityRaw
-    ? eligibilityRaw
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean)
-    : [];
-
-  const salaryMin = salaryMinValue ? Number(salaryMinValue) : null;
-
-  const salaryMax = salaryMaxValue ? Number(salaryMaxValue) : null;
-
-  // Create job
-  const { data: job, error: jobError } = await supabase
-    .from("jobs")
-    .insert({
-      title,
-      slug,
-      company_id: companyId,
-      category_id: categoryId,
-      location,
-      job_type: jobType,
-      experience,
-      salary_min: salaryMin,
-      salary_max: salaryMax,
-      salary_period: salaryPeriod || null,
-      posted_at: postedAt || new Date().toISOString().split("T")[0],
-      deadline: deadline || null,
-      description,
-      eligibility,
-      application_url: applicationUrl,
-      is_published: isPublished,
-    })
-    .select("id")
-    .single();
-
-  if (jobError || !job) {
-    console.error("Create job error:", jobError);
-
-    return {
-      error: jobError?.message || "Failed to create job.",
-    };
-  }
-
-  // Create job-skill relationships
-  const jobSkills = skills.map((skillId) => ({
-    job_id: job.id,
-    skill_id: skillId,
-  }));
-
-  const { error: skillsError } = await supabase
-    .from("job_skills")
-    .insert(jobSkills);
-
-  if (skillsError) {
-    console.error("Create job skills error:", skillsError);
-
-    // Remove job if skill insertion failed
-    await supabase.from("jobs").delete().eq("id", job.id);
-
-    return {
-      error: "Job was created but skills could not be saved.",
-    };
-  }
-
-  redirect("/admin/jobs");
-}
-
-export async function updateJob(formData: FormData) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return {
-      error: "You must be logged in.",
-    };
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
-    return {
-      error: "You are not authorized to update jobs.",
-    };
-  }
-
-  const jobId = String(formData.get("jobId") || "");
-
-  const title = String(formData.get("title") || "").trim();
-  const companyId = String(formData.get("companyId") || "");
-  const categoryId = String(formData.get("categoryId") || "");
-  const location = String(formData.get("location") || "").trim();
-  const jobType = String(formData.get("jobType") || "");
-  const experience = String(formData.get("experience") || "").trim();
-
-  const salaryMinValue = String(formData.get("salaryMin") || "");
-
-  const salaryMaxValue = String(formData.get("salaryMax") || "");
-
-  const salaryPeriod = String(formData.get("salaryPeriod") || "");
-
-  const postedAt = String(formData.get("postedAt") || "");
-
-  const deadline = String(formData.get("deadline") || "");
-
-  const description = String(formData.get("description") || "").trim();
-
-  const eligibilityRaw = String(formData.get("eligibility") || "").trim();
-
-  const applicationUrl = String(formData.get("applicationUrl") || "").trim();
-
-  const skills = formData.getAll("skills").map(String);
-
-  const isPublished = formData.get("isPublished") === "true";
-
-  if (
-    !jobId ||
-    !title ||
-    !companyId ||
-    !categoryId ||
-    !location ||
-    !jobType ||
-    !experience ||
-    !description ||
-    !applicationUrl
-  ) {
-    return {
-      error: "Please fill in all required fields.",
-    };
-  }
-
-  if (skills.length === 0) {
-    return {
-      error: "Please select at least one skill.",
-    };
-  }
-
-  const eligibility = eligibilityRaw
-    ? eligibilityRaw
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean)
-    : [];
-
-  const salaryMin = salaryMinValue ? Number(salaryMinValue) : null;
-
-  const salaryMax = salaryMaxValue ? Number(salaryMaxValue) : null;
 
   if (salaryMin !== null && Number.isNaN(salaryMin)) {
     return {
@@ -268,7 +225,10 @@ export async function updateJob(formData: FormData) {
     };
   }
 
-  // Get company name for slug
+  /* -----------------------------
+     Get company
+  ----------------------------- */
+
   const { data: company, error: companyError } = await supabase
     .from("companies")
     .select("name")
@@ -283,7 +243,405 @@ export async function updateJob(formData: FormData) {
 
   const slug = createSlug(title, company.name);
 
-  // Update job
+  /* =====================================================
+     CREATE MAIN JOB
+  ===================================================== */
+
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .insert({
+      title,
+      slug,
+      company_id: companyId,
+      category_id: categoryId,
+
+      // Compatibility column
+      location: finalLocations.join(", "),
+
+      job_type: jobType,
+      work_mode: workMode || null,
+      experience,
+
+      salary_min: salaryMin,
+      salary_max: salaryMax,
+      salary_period: salaryPeriod || null,
+      salary_disclosed: salaryDisclosed,
+
+      posted_at: postedAt || new Date().toISOString().split("T")[0],
+
+      deadline: deadline || null,
+
+      description,
+      eligibility,
+
+      education: education.length > 0 ? education : null,
+
+      graduation_years: graduationYears.length > 0 ? graduationYears : null,
+
+      application_url: applicationUrl,
+      application_source: applicationSource || null,
+
+      is_published: isPublished,
+      is_verified: isVerified,
+      verified_at: isVerified ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
+
+  if (jobError || !job) {
+    console.error("Create job error:", jobError);
+
+    return {
+      error: jobError?.message || "Failed to create job.",
+    };
+  }
+
+  const jobId = job.id;
+
+  /* =====================================================
+     LOCATIONS
+  ===================================================== */
+
+  const jobLocations = finalLocations.map((location) => ({
+    job_id: jobId,
+    location,
+  }));
+
+  const { error: locationsError } = await supabase
+    .from("job_locations")
+    .insert(jobLocations);
+
+  if (locationsError) {
+    console.error("Create job locations error:", locationsError);
+
+    await supabase.from("jobs").delete().eq("id", jobId);
+
+    return {
+      error: "Job was created but locations could not be saved.",
+    };
+  }
+
+  /* =====================================================
+     RESPONSIBILITIES
+  ===================================================== */
+
+  if (responsibilities.length > 0) {
+    const rows = responsibilities.map((responsibility, index) => ({
+      job_id: jobId,
+      responsibility,
+      position: index,
+    }));
+
+    const { error } = await supabase.from("job_responsibilities").insert(rows);
+
+    if (error) {
+      console.error("Create responsibilities error:", error);
+
+      await supabase.from("job_locations").delete().eq("job_id", jobId);
+
+      await supabase.from("jobs").delete().eq("id", jobId);
+
+      return {
+        error: "Job was created but responsibilities could not be saved.",
+      };
+    }
+  }
+
+  /* =====================================================
+     REQUIREMENTS
+  ===================================================== */
+
+  if (requirements.length > 0) {
+    const rows = requirements.map((requirement, index) => ({
+      job_id: jobId,
+      requirement,
+      position: index,
+    }));
+
+    const { error } = await supabase.from("job_requirements").insert(rows);
+
+    if (error) {
+      console.error("Create requirements error:", error);
+
+      await supabase.from("job_locations").delete().eq("job_id", jobId);
+
+      await supabase.from("job_responsibilities").delete().eq("job_id", jobId);
+
+      await supabase.from("jobs").delete().eq("id", jobId);
+
+      return {
+        error: "Job was created but requirements could not be saved.",
+      };
+    }
+  }
+
+  /* =====================================================
+     BENEFITS
+  ===================================================== */
+
+  if (benefits.length > 0) {
+    const rows = benefits.map((benefit, index) => ({
+      job_id: jobId,
+      benefit,
+      position: index,
+    }));
+
+    const { error } = await supabase.from("job_benefits").insert(rows);
+
+    if (error) {
+      console.error("Create benefits error:", error);
+
+      await supabase.from("job_locations").delete().eq("job_id", jobId);
+
+      await supabase.from("job_responsibilities").delete().eq("job_id", jobId);
+
+      await supabase.from("job_requirements").delete().eq("job_id", jobId);
+
+      await supabase.from("jobs").delete().eq("id", jobId);
+
+      return {
+        error: "Job was created but benefits could not be saved.",
+      };
+    }
+  }
+
+  /* =====================================================
+     JOB SKILLS
+  ===================================================== */
+
+  const jobSkills = skills.map((skillId) => ({
+    job_id: jobId,
+    skill_id: skillId,
+  }));
+
+  const { error: skillsError } = await supabase
+    .from("job_skills")
+    .insert(jobSkills);
+
+  if (skillsError) {
+    console.error("Create job skills error:", skillsError);
+
+    await supabase.from("job_locations").delete().eq("job_id", jobId);
+
+    await supabase.from("job_responsibilities").delete().eq("job_id", jobId);
+
+    await supabase.from("job_requirements").delete().eq("job_id", jobId);
+
+    await supabase.from("job_benefits").delete().eq("job_id", jobId);
+
+    await supabase.from("jobs").delete().eq("id", jobId);
+
+    return {
+      error: "Job was created but skills could not be saved.",
+    };
+  }
+
+  redirect("/admin/jobs");
+}
+
+/* =========================================================
+   UPDATE JOB
+========================================================= */
+
+export async function updateJob(formData: FormData) {
+  const supabase = await createClient();
+
+  /* -----------------------------
+     Authentication
+  ----------------------------- */
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: "You must be logged in.",
+    };
+  }
+
+  /* -----------------------------
+     Admin check
+  ----------------------------- */
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "admin") {
+    return {
+      error: "You are not authorized to update jobs.",
+    };
+  }
+
+  /* -----------------------------
+     Basic information
+  ----------------------------- */
+
+  const jobId = String(formData.get("jobId") || "");
+
+  const title = String(formData.get("title") || "").trim();
+
+  const companyId = String(formData.get("companyId") || "");
+
+  const categoryId = String(formData.get("categoryId") || "");
+
+  const finalLocations = getFinalLocations(formData);
+
+  const jobType = String(formData.get("jobType") || "");
+
+  const workMode = String(formData.get("workMode") || "");
+
+  const experience = String(formData.get("experience") || "").trim();
+
+  /* -----------------------------
+     Salary
+  ----------------------------- */
+
+  const salaryMinValue = String(formData.get("salaryMin") || "");
+
+  const salaryMaxValue = String(formData.get("salaryMax") || "");
+
+  const salaryPeriod = String(formData.get("salaryPeriod") || "");
+
+  const salaryMin = salaryMinValue ? Number(salaryMinValue) : null;
+
+  const salaryMax = salaryMaxValue ? Number(salaryMaxValue) : null;
+
+  const salaryDisclosed = formData.has("salaryDisclosed")
+    ? formData.get("salaryDisclosed") === "true"
+    : salaryMin !== null || salaryMax !== null;
+
+  /* -----------------------------
+     Dates
+  ----------------------------- */
+
+  const postedAt = String(formData.get("postedAt") || "");
+
+  const deadline = String(formData.get("deadline") || "");
+
+  /* -----------------------------
+     Content
+  ----------------------------- */
+
+  const description = String(formData.get("description") || "").trim();
+
+  const eligibility = getLines(formData, "eligibility");
+
+  const responsibilities = getLines(formData, "responsibilities");
+
+  const requirements = getLines(formData, "requirements");
+
+  const benefits = getLines(formData, "benefits");
+
+  /* -----------------------------
+     Candidate requirements
+  ----------------------------- */
+
+  const education = getList(formData, "education");
+
+  const graduationYears = getNumberArray(formData, "graduationYears");
+
+  /* -----------------------------
+     Application
+  ----------------------------- */
+
+  const applicationUrl = String(formData.get("applicationUrl") || "").trim();
+
+  const applicationSource = String(
+    formData.get("applicationSource") || "",
+  ).trim();
+
+  /* -----------------------------
+     Skills
+  ----------------------------- */
+
+  const skills = Array.from(
+    new Set(
+      formData
+        .getAll("skills")
+        .map(String)
+        .map((skill) => skill.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  /* -----------------------------
+     Publishing / verification
+  ----------------------------- */
+
+  const isPublished = formData.get("isPublished") === "true";
+
+  const isVerified = formData.get("isVerified") === "true";
+
+  /* -----------------------------
+     Validation
+  ----------------------------- */
+
+  if (
+    !jobId ||
+    !title ||
+    !companyId ||
+    !categoryId ||
+    finalLocations.length === 0 ||
+    !jobType ||
+    !experience ||
+    !description ||
+    !applicationUrl
+  ) {
+    return {
+      error: "Please fill in all required fields.",
+    };
+  }
+
+  if (skills.length === 0) {
+    return {
+      error: "Please select at least one skill.",
+    };
+  }
+
+  if (salaryMin !== null && Number.isNaN(salaryMin)) {
+    return {
+      error: "Minimum salary is invalid.",
+    };
+  }
+
+  if (salaryMax !== null && Number.isNaN(salaryMax)) {
+    return {
+      error: "Maximum salary is invalid.",
+    };
+  }
+
+  if (salaryMin !== null && salaryMax !== null && salaryMin > salaryMax) {
+    return {
+      error: "Minimum salary cannot be greater than maximum salary.",
+    };
+  }
+
+  /* -----------------------------
+     Get company
+  ----------------------------- */
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("name")
+    .eq("id", companyId)
+    .single();
+
+  if (companyError || !company) {
+    return {
+      error: "Selected company could not be found.",
+    };
+  }
+
+  const slug = createSlug(title, company.name);
+
+  /* =====================================================
+     UPDATE MAIN JOB
+  ===================================================== */
+
   const { error: jobError } = await supabase
     .from("jobs")
     .update({
@@ -291,18 +649,40 @@ export async function updateJob(formData: FormData) {
       slug,
       company_id: companyId,
       category_id: categoryId,
-      location,
+
+      // Compatibility column
+      location: finalLocations.join(", "),
+
       job_type: jobType,
+      work_mode: workMode || null,
       experience,
+
       salary_min: salaryMin,
       salary_max: salaryMax,
       salary_period: salaryPeriod || null,
+      salary_disclosed: salaryDisclosed,
+
       posted_at: postedAt || new Date().toISOString().split("T")[0],
+
       deadline: deadline || null,
+
       description,
       eligibility,
+
+      education: education.length > 0 ? education : null,
+
+      graduation_years: graduationYears.length > 0 ? graduationYears : null,
+
       application_url: applicationUrl,
+
+      application_source: applicationSource || null,
+
       is_published: isPublished,
+
+      is_verified: isVerified,
+
+      verified_at: isVerified ? new Date().toISOString() : null,
+
       updated_at: new Date().toISOString(),
     })
     .eq("id", jobId);
@@ -315,7 +695,159 @@ export async function updateJob(formData: FormData) {
     };
   }
 
-  // Remove existing skills
+  /* =====================================================
+     REPLACE LOCATIONS
+  ===================================================== */
+
+  const { data: deletedLocations, error: deleteLocationsError } = await supabase
+    .from("job_locations")
+    .delete()
+    .eq("job_id", jobId)
+    .select("id");
+
+  if (deleteLocationsError) {
+    console.error("DELETE JOB LOCATIONS ERROR:", deleteLocationsError);
+
+    return {
+      error: `Location delete failed: ${deleteLocationsError.message}`,
+    };
+  }
+
+  console.log(
+    `Deleted ${deletedLocations?.length ?? 0} location rows for job ${jobId}`,
+  );
+
+  const jobLocations = finalLocations.map((location) => ({
+    job_id: jobId,
+    location,
+  }));
+
+  if (jobLocations.length > 0) {
+    const { error: locationsError } = await supabase
+      .from("job_locations")
+      .insert(jobLocations);
+
+    if (locationsError) {
+      console.error("INSERT JOB LOCATIONS ERROR:", locationsError);
+
+      return {
+        error: `Location save failed: ${locationsError.message}`,
+      };
+    }
+  }
+
+  /* =====================================================
+     REPLACE RESPONSIBILITIES
+  ===================================================== */
+
+  const { error: deleteResponsibilitiesError } = await supabase
+    .from("job_responsibilities")
+    .delete()
+    .eq("job_id", jobId);
+
+  if (deleteResponsibilitiesError) {
+    console.error(
+      "Delete responsibilities error:",
+      deleteResponsibilitiesError,
+    );
+
+    return {
+      error: "Job was updated but responsibilities could not be replaced.",
+    };
+  }
+
+  if (responsibilities.length > 0) {
+    const rows = responsibilities.map((responsibility, index) => ({
+      job_id: jobId,
+      responsibility,
+      position: index,
+    }));
+
+    const { error } = await supabase.from("job_responsibilities").insert(rows);
+
+    if (error) {
+      console.error("Update responsibilities error:", error);
+
+      return {
+        error: "Job was updated but responsibilities could not be saved.",
+      };
+    }
+  }
+
+  /* =====================================================
+     REPLACE REQUIREMENTS
+  ===================================================== */
+
+  const { error: deleteRequirementsError } = await supabase
+    .from("job_requirements")
+    .delete()
+    .eq("job_id", jobId);
+
+  if (deleteRequirementsError) {
+    console.error("Delete requirements error:", deleteRequirementsError);
+
+    return {
+      error: "Job was updated but requirements could not be replaced.",
+    };
+  }
+
+  if (requirements.length > 0) {
+    const rows = requirements.map((requirement, index) => ({
+      job_id: jobId,
+      requirement,
+      position: index,
+    }));
+
+    const { error } = await supabase.from("job_requirements").insert(rows);
+
+    if (error) {
+      console.error("Update requirements error:", error);
+
+      return {
+        error: "Job was updated but requirements could not be saved.",
+      };
+    }
+  }
+
+  /* =====================================================
+     REPLACE BENEFITS
+  ===================================================== */
+
+  const { error: deleteBenefitsError } = await supabase
+    .from("job_benefits")
+    .delete()
+    .eq("job_id", jobId);
+
+  if (deleteBenefitsError) {
+    console.error("Delete benefits error:", deleteBenefitsError);
+
+    return {
+      error: "Job was updated but benefits could not be replaced.",
+    };
+  }
+
+  if (benefits.length > 0) {
+    const rows = benefits.map((benefit, index) => ({
+      job_id: jobId,
+      benefit,
+      position: index,
+    }));
+
+    const { error } = await supabase.from("job_benefits").insert(rows);
+
+    if (error) {
+      console.error("Update benefits error:", error);
+
+      return {
+        error: "Job was updated but benefits could not be saved.",
+      };
+    }
+  }
+
+  /* =====================================================
+     REPLACE SKILLS
+  ===================================================== */
+
   const { error: deleteSkillsError } = await supabase
     .from("job_skills")
     .delete()
@@ -329,7 +861,6 @@ export async function updateJob(formData: FormData) {
     };
   }
 
-  // Add updated skills
   const jobSkills = skills.map((skillId) => ({
     job_id: jobId,
     skill_id: skillId,
@@ -349,6 +880,10 @@ export async function updateJob(formData: FormData) {
 
   redirect("/admin/jobs");
 }
+
+/* =========================================================
+   DELETE JOB
+========================================================= */
 
 export async function deleteJob(jobId: string) {
   const supabase = await createClient();
@@ -381,7 +916,78 @@ export async function deleteJob(jobId: string) {
     };
   }
 
-  // Delete related skills first
+  /* -----------------------------
+     Delete locations
+  ----------------------------- */
+
+  const { error: locationsError } = await supabase
+    .from("job_locations")
+    .delete()
+    .eq("job_id", jobId);
+
+  if (locationsError) {
+    console.error("Delete job locations error:", locationsError);
+
+    return {
+      error: "Failed to remove job locations.",
+    };
+  }
+
+  /* -----------------------------
+     Delete responsibilities
+  ----------------------------- */
+
+  const { error: responsibilitiesError } = await supabase
+    .from("job_responsibilities")
+    .delete()
+    .eq("job_id", jobId);
+
+  if (responsibilitiesError) {
+    console.error("Delete responsibilities error:", responsibilitiesError);
+
+    return {
+      error: "Failed to remove job responsibilities.",
+    };
+  }
+
+  /* -----------------------------
+     Delete requirements
+  ----------------------------- */
+
+  const { error: requirementsError } = await supabase
+    .from("job_requirements")
+    .delete()
+    .eq("job_id", jobId);
+
+  if (requirementsError) {
+    console.error("Delete requirements error:", requirementsError);
+
+    return {
+      error: "Failed to remove job requirements.",
+    };
+  }
+
+  /* -----------------------------
+     Delete benefits
+  ----------------------------- */
+
+  const { error: benefitsError } = await supabase
+    .from("job_benefits")
+    .delete()
+    .eq("job_id", jobId);
+
+  if (benefitsError) {
+    console.error("Delete job benefits error:", benefitsError);
+
+    return {
+      error: "Failed to remove job benefits.",
+    };
+  }
+
+  /* -----------------------------
+     Delete skills
+  ----------------------------- */
+
   const { error: skillsError } = await supabase
     .from("job_skills")
     .delete()
@@ -395,7 +1001,10 @@ export async function deleteJob(jobId: string) {
     };
   }
 
-  // Delete the job
+  /* -----------------------------
+     Delete main job
+  ----------------------------- */
+
   const { error: jobError } = await supabase
     .from("jobs")
     .delete()
@@ -414,10 +1023,11 @@ export async function deleteJob(jobId: string) {
   };
 }
 
-export async function toggleJobPublished(
-  jobId: string,
-  isPublished: boolean
-) {
+/* =========================================================
+   TOGGLE PUBLISHED
+========================================================= */
+
+export async function toggleJobPublished(jobId: string, isPublished: boolean) {
   const supabase = await createClient();
 
   const {
