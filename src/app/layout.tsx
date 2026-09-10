@@ -115,13 +115,30 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <StructuredData />
+
         {children}
 
-        <script
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-9SY5VPYD19"
+          strategy="afterInteractive"
+        />
+
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){window.dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-9SY5VPYD19');
+          `}
+        </Script>
+
+        {/* Google AdSense */}
+        <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9680067449978841"
           crossOrigin="anonymous"
-        ></script>
+        />
       </body>
     </html>
   );
