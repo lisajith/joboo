@@ -59,7 +59,8 @@ export default async function Categories() {
     return null;
   }
 
-  const categoriesWithCounts = await Promise.all(
+  const categoriesWithCounts = (
+  await Promise.all(
     (categories ?? []).map(async (category, index) => {
       const { count } = await supabase
         .from("jobs")
@@ -75,7 +76,8 @@ export default async function Categories() {
         ...style,
       };
     }),
-  );
+  )
+).filter((category) => category.jobsCount > 0);
 
   return (
     <section className="relative overflow-hidden px-5 pb-20 pt-16 sm:px-8 sm:pt-20 lg:px-12 lg:pb-20 lg:pt-20">

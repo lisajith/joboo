@@ -94,7 +94,8 @@ export default async function CategoriesPage() {
     console.error("Error fetching categories:", error);
   }
 
-  const categoriesWithCounts = await Promise.all(
+  const categoriesWithCounts = (
+  await Promise.all(
     (categories ?? []).map(async (category, index) => {
       const { count } = await supabase
         .from("jobs")
@@ -113,7 +114,8 @@ export default async function CategoriesPage() {
         ...style,
       };
     }),
-  );
+  )
+).filter((category) => category.jobsCount > 0);
 
   return (
     <main className="min-h-screen bg-background">

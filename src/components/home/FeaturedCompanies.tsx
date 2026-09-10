@@ -7,17 +7,17 @@ const companyStyles = ["bg-blue", "bg-primary", "bg-orange", "bg-pink"];
 
 export default async function FeaturedCompanies() {
   const { data: companies, error } = await supabase
-    .from("companies")
-    .select("id, name, slug, description")
-    .order("name")
-    .limit(4);
+  .from("companies")
+  .select("id, name, slug, description")
+  .order("name");
 
-  if (error) {
-    console.error("Error fetching companies:", error);
-    return null;
-  }
+if (error) {
+  console.error("Error fetching companies:", error);
+  return null;
+}
 
-  const companiesWithCounts = await Promise.all(
+const companiesWithCounts = (
+  await Promise.all(
     (companies ?? []).map(async (company, index) => {
       const { count } = await supabase
         .from("jobs")
@@ -31,7 +31,10 @@ export default async function FeaturedCompanies() {
         color: companyStyles[index % companyStyles.length],
       };
     }),
-  );
+  )
+)
+  .filter((company) => company.jobsCount > 0)
+  .slice(0, 4);
 
   return (
     <section className="relative overflow-hidden px-5 pb-20 pt-16 sm:px-8 sm:pt-20 lg:px-12 lg:pb-20 lg:pt-20">

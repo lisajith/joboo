@@ -49,7 +49,8 @@ export default async function CompaniesPage() {
     throw new Error("Failed to fetch companies");
   }
 
-  const companiesWithCounts = await Promise.all(
+  const companiesWithCounts = (
+  await Promise.all(
     (companies ?? []).map(async (company, index) => {
       const { count } = await supabase
         .from("jobs")
@@ -66,7 +67,8 @@ export default async function CompaniesPage() {
         color: companyStyles[index % companyStyles.length],
       };
     }),
-  );
+  )
+).filter((company) => company.jobsCount > 0);
 
   return (
     <main className="min-h-screen bg-background">
