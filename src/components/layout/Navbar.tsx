@@ -64,15 +64,16 @@ export default function Navbar() {
         <Link
           href="/"
           onClick={closeMenu}
-          className="group flex items-center gap-2"
+          className="group flex min-w-0 items-center gap-2"
         >
-          <div className="flex h-10 items-center justify-center rounded-xl text-lg font-bold transition-transform duration-200 group-hover:rotate-6 group-hover:scale-120">
+          <div className="flex min-w-0 items-center justify-center rounded-xl text-lg font-bold">
             <img
               src="/Job.png"
               alt="Where Is My Job?"
-              className="h-10 w-auto object-contain"
+              className="h-9 w-auto shrink-0 object-contain sm:h-10"
             />
-            <span className="hidden font-heading text-2xl font-bold tracking-tight text-foreground sm:block">
+
+            <span className="ml-1 whitespace-nowrap font-heading text-lg font-bold tracking-tight text-foreground sm:text-2xl">
               Where Is My <span className="text-primary">Job?</span>
             </span>
           </div>
