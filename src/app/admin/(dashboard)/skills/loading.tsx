@@ -1,0 +1,5 @@
+import Loading from "@/utils/Loading";
+
+export default function JobDetailsLoading() {
+  return <Loading text="Wait Baby..." />;
+}
