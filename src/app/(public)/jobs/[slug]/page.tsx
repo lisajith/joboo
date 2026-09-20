@@ -23,6 +23,9 @@ import { getJobBySlug } from "@/lib/jobs/getJobBySlug";
 import { getRelatedJobs } from "@/lib/jobs/getRelatedJobs";
 import { formatDate, formatSalary } from "@/lib/job-utils";
 import SaveJobButton from "@/components/jobs/SaveJobButton";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
 
 type JobDetailsPageProps = {
   params: Promise<{
@@ -705,8 +708,10 @@ export default async function JobDetailsPage({ params }: JobDetailsPageProps) {
                 application.
               </p>
             </div>
+          <AdsterraBanner />
           </aside>
         </div>
+        <AdsterraBanner468 />
 
         {/* =================================================
             RELATED JOBS
@@ -758,6 +763,7 @@ export default async function JobDetailsPage({ params }: JobDetailsPageProps) {
           </section>
         )}
       </div>
+      <AdsterraNativeBanner />
 
       {/* =====================================================
           JOBPOSTING STRUCTURED DATA

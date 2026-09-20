@@ -14,6 +14,9 @@ import JobCard from "@/components/jobs/JobCard";
 import { supabase } from "@/lib/supabase/client";
 import { createClient } from "@/lib/supabase/server";
 import type { Job } from "@/types/job";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
 
 type CompanyPageProps = {
   params: Promise<{ slug: string }>;
@@ -354,6 +357,8 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
         </div>
       </section>
 
+      <AdsterraNativeBanner />
+
       {/* Jobs */}
       <section className="px-5 py-16 sm:px-8 lg:px-12 lg:py-20">
         <div className="mx-auto max-w-7xl">
@@ -404,6 +409,8 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
           )}
         </div>
       </section>
+      <AdsterraBanner />
+      <AdsterraBanner468 />
     </main>
   );
 }

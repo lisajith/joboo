@@ -1,3 +1,6 @@
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
 import Categories from "@/components/home/Categories";
 import Creator from "@/components/home/Creator";
 import CTA from "@/components/home/CTA";
@@ -38,10 +41,13 @@ export default function Home() {
       <div className="relative">
         <Hero />
         <LatestJobs />
+        <AdsterraNativeBanner />
         <Categories />
         <FeaturedCompanies />
+        <AdsterraBanner />
         <WhyUs />
         <Creator />
+        <AdsterraBanner468 />
         <CTA />
       </div>
     </main>

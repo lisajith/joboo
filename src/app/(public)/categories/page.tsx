@@ -14,6 +14,9 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
 
 const categoryStyles = [
   {
@@ -145,6 +148,7 @@ export default async function CategoriesPage() {
                 discover jobs that match your skills, experience and interests.
               </p>
             </div>
+            <AdsterraBanner468 />
 
             <Link
               href="/jobs"
@@ -263,6 +267,8 @@ export default async function CategoriesPage() {
           </div>
         </div>
       </section>
+      <AdsterraNativeBanner />
+      <AdsterraBanner />
     </main>
   );
 }

@@ -4,6 +4,9 @@ import { ArrowLeft } from "lucide-react";
 import JobsBrowser from "@/components/jobs/JobsBrowser";
 import { getJobs } from "@/lib/jobs/getJobs";
 import type { Metadata } from "next";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
 
 type JobsPageProps = {
   searchParams: Promise<{
@@ -79,12 +82,16 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
             next generation of job seekers.
           </p>
 
+          <AdsterraBanner468 />
+
           <div className="mt-8">
             <JobsBrowser
               jobs={jobs}
               initialSearch={initialSearch}
               initialLocation={initialLocation}
             />
+          <AdsterraNativeBanner />
+          <AdsterraBanner />
           </div>
         </div>
       </section>

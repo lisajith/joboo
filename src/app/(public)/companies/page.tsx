@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { ArrowLeft, ArrowUpRight, Building2, Users } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
 
 export const metadata: Metadata = {
   title: "Companies Hiring Freshers & Graduates",
@@ -101,6 +104,8 @@ export default async function CompaniesPage() {
         </div>
       </section>
 
+      <AdsterraNativeBanner />
+
       {/* Companies */}
       <section className="px-5 py-16 sm:px-8 lg:px-12 lg:py-20">
         <div className="mx-auto max-w-7xl">
@@ -178,6 +183,8 @@ export default async function CompaniesPage() {
               </p>
             </div>
           )}
+          <AdsterraBanner />
+          <AdsterraBanner468 />
         </div>
       </section>
     </main>

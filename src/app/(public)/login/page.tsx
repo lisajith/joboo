@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import LoginForm from "@/components/auth/LoginForm";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -31,6 +32,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+      <AdsterraBanner468 />
     </main>
   );
 }

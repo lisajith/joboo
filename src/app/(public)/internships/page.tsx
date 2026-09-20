@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
 
 export const metadata: Metadata = {
   title: "Internships",
@@ -86,6 +89,8 @@ export default async function InternshipsPage() {
           </div>
         </div>
       </section>
+
+      <AdsterraBanner468 />
 
       {/* Internships */}
       <section className="px-5 py-16 sm:px-8 lg:px-12 lg:py-20">
@@ -187,6 +192,8 @@ export default async function InternshipsPage() {
           )}
         </div>
       </section>
+      <AdsterraNativeBanner />
+      <AdsterraBanner />
     </main>
   );
 }

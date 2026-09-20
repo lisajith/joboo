@@ -7,6 +7,9 @@ import {
   Mail,
   MessageCircle,
 } from "lucide-react";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
 
 export const metadata = {
   title: "Contact Us",
@@ -60,6 +63,7 @@ export default function ContactPage() {
 
       {/* Contact options */}
       <section className="bg-surface-soft px-5 py-14 lg:px-8">
+        <AdsterraBanner468 />
         <div className="mx-auto max-w-5xl">
           <div className="grid gap-4 md:grid-cols-3">
             {contactOptions.map((option) => {
@@ -144,6 +148,8 @@ export default function ContactPage() {
         </div>
       </section>
 
+      <AdsterraNativeBanner />
+
       {/* Helpful links */}
       <section className="bg-surface-soft px-5 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
@@ -196,6 +202,7 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+      <AdsterraBanner />
     </main>
   );
 }

@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 
 import StructuredData from "@/components/seo/StructuredData";
+import AdsterraSocialBar from "@/components/ads/AdsterraSocialBar";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -117,6 +118,7 @@ export default function RootLayout({
         <StructuredData />
 
         {children}
+        <AdsterraSocialBar />
 
         {/* Google Analytics */}
         <Script

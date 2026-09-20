@@ -6,6 +6,10 @@ import { LockKeyhole, Mail, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/client";
+import AdsterraBanner728 from "@/components/ads/AdsterraBanner728";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -171,6 +175,9 @@ export default function AdminLoginPage() {
           </p>
         </div>
       </main>
+      <AdsterraBanner728 />
+      <AdsterraBanner />
+      <AdsterraNativeBanner />
     </div>
   );
 }

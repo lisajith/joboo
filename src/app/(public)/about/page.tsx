@@ -18,6 +18,9 @@ import {
 import { FaGithub, FaLinkedinIn } from "react-icons/fa";
 
 import PersonStructuredData from "@/components/seo/PersonStructuredData";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
+import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
 
 export const metadata: Metadata = {
   title: "About Ajith Kumar Malle | Creator of Where Is My Job?",
@@ -107,6 +110,7 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+      <AdsterraBanner468 />
 
       {/* =========================================================
           MISSION
@@ -292,6 +296,8 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <AdsterraNativeBanner />
+
       {/* =========================================================
           WHAT WE DO
       ========================================================= */}
@@ -464,6 +470,8 @@ export default function AboutPage() {
           </Link>
         </div>
       </section>
+
+      <AdsterraBanner />
     </main>
   );
 }
