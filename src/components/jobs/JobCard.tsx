@@ -50,14 +50,14 @@ export default function JobCard({
   const salary =
     salaryDisclosed && (salaryMin !== null || salaryMax !== null)
       ? salaryMin !== null && salaryMax !== null
-        ? `₹${salaryMin.toLocaleString()} – ₹${salaryMax.toLocaleString()} ${
-            salaryPeriod === "year" ? "LPA" : "per month"
-          }`
+        ? `₹${salaryMin.toLocaleString("en-IN")} - ₹${salaryMax.toLocaleString(
+            "en-IN",
+          )} ${salaryPeriod === "year" ? "LPA" : "per month"}`
         : salaryMin !== null
-          ? `From ₹${salaryMin.toLocaleString()} ${
+          ? `From ₹${salaryMin.toLocaleString("en-IN")} ${
               salaryPeriod === "year" ? "LPA" : "per month"
             }`
-          : `Up to ₹${salaryMax?.toLocaleString()} ${
+          : `Up to ₹${salaryMax?.toLocaleString("en-IN")} ${
               salaryPeriod === "year" ? "LPA" : "per month"
             }`
       : null;
