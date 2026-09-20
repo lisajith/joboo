@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import LoginForm from "@/components/auth/LoginForm";
 import AdsterraBanner468 from "@/components/ads/AdsterraBanner468";
+import AdsterraBanner from "@/components/ads/AdsterraBanner";
+import AdsterraNativeBanner from "@/components/ads/AdsterraNativeBanner";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -11,6 +13,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <main className="min-h-screen bg-background px-5 py-12 sm:px-8 lg:px-12 lg:py-20">
+      <AdsterraBanner468 />
       <div className="mx-auto flex min-h-[calc(100vh-10rem)] max-w-xl items-center">
         <div className="w-full">
           <div className="text-center">
@@ -32,7 +35,8 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      <AdsterraBanner468 />
+      <AdsterraBanner />
+      <AdsterraNativeBanner />
     </main>
   );
 }

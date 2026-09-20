@@ -176,8 +176,6 @@ export default function AdminLoginPage() {
         </div>
       </main>
       <AdsterraBanner728 />
-      <AdsterraBanner />
-      <AdsterraNativeBanner />
     </div>
   );
 }
