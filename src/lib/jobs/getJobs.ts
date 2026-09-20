@@ -51,7 +51,8 @@ export async function getJobs(): Promise<Job[]> {
     `,
     )
     .eq("is_published", true)
-    .order("posted_at", { ascending: false });
+    .order("posted_at", { ascending: false })
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("Error fetching jobs:", error);
